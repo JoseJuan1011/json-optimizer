@@ -45,6 +45,36 @@ function renameSingleProperties({ objectMap, valuesMap }) {
 }
 
 /**
+   * 
+   * @param {Object} obj
+   * @param {String} obj.key
+   * @param {Map<String, RegExp>} obj.regexArrayMap 
+   * @param {Array<Array>} obj.regexValues 
+   * @param {Map<String, Object>} obj.objectMap
+   */
+const anyRegexKeyMatchingKey = ({key, value, regexArrayMap, regexValues, objectMap}) => {
+  const entriesIterator = regexArrayMap.entries();
+
+  let currentValue = entriesIterator.next();
+  while (!currentValue.done) {
+    const newKey = currentValue.value[0];
+    const regex = currentValue.value[1];
+
+    const keyMatchesRegex = regex.test(key);
+
+    if (keyMatchesRegex) {
+      const indexNewKey = regexValues.findIndex((value) => value[0] === newKey);
+      const listValuesKey = regexValues[indexNewKey][1];
+      listValuesKey.push(value);
+      objectMap.delete(key);
+    }
+    currentValue = entriesIterator.next();
+  }
+
+  return [regexValues, objectMap];
+}
+
+/**
  * 
  * @param {Object} obj
  * @param {Map<string, Object>} obj.objectMap
@@ -60,14 +90,46 @@ function fromSingleToArrayProperties({
   
   Then, you check every key to see if it matches any of the regex themselves. 
   */
+  /**
+   * @type {Array<Array>}
+   */
+  let regexValues = [];
+
+  const regexArrayMapEntries = regexArrayMap.entries();
+
+  let currentRegex = regexArrayMapEntries.next();
+  while (!currentRegex.done) {
+    const currentRegexKey = currentRegex.value[0];
+    regexValues.push([currentRegexKey, []]);
+
+    currentRegex = regexArrayMapEntries.next();
+  }
+
   const entriesIterator = objectMap.entries();
 
   let currentValue = entriesIterator.next();
   while (!currentValue.done) {
+    const currentValueKey = currentValue.value[0];
+    const currentValueValue = currentValue.value[1];
     
+    [regexValues, objectMap] = anyRegexKeyMatchingKey({
+      key: currentValueKey,
+      value: currentValueValue,
+      regexArrayMap: regexArrayMap,
+      regexValues: regexValues,
+      objectMap: objectMap,
+    });
 
     currentValue = entriesIterator.next();
   }
+
+  console.log(regexValues);
+  regexValues = regexValues.filter((value) => value[1].length > 0);
+  regexValues.forEach((value) => {
+    objectMap.set(value[0], value[1]);
+  });
+
+  return objectMap;
 }
 
 /**
@@ -103,12 +165,15 @@ function regexKeysToArray({
     });
   }
   if (regexObjectMap.size > 0) {
+    /* 
+      In this case I will put all those keys into an object, 
+      which will still be into the original object
+      but in a new key, whose name is chosen by the user.
+    */
   }
 
   return Object.fromEntries(objectMap.entries());
 }
-
-
 
 getCocktailJsonPromise().then((res) => {
   const object = res;
@@ -118,11 +183,17 @@ getCocktailJsonPromise().then((res) => {
     ["strCategory", "category"],
   ]);
 
+  const regexArrayMap = new Map([
+    ["ingredients", /strIngredient/],
+    ["measures", /strMeasure/],
+  ]);
+
   const finalObject = regexKeysToArray({
     jsonObject: object,
     valuesMap: valuesMap,
+    regexArrayMap: regexArrayMap,
     purgeNull: true,
   });
 
-  console.log(finalObject);
+  console.log(JSON.stringify(finalObject, null, 2));
 });
