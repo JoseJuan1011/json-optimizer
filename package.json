@@ -18,5 +18,12 @@
   "bugs": {
     "url": "https://github.com/JoseJuan1011/Optimizaci-n-de-JSON/issues"
   },
-  "homepage": "https://github.com/JoseJuan1011/Optimizaci-n-de-JSON#readme"
+  "homepage": "https://github.com/JoseJuan1011/Optimizaci-n-de-JSON#readme",
+  "devDependencies": {
+    "eslint": "^8.51.0",
+    "eslint-config-google": "^0.14.0"
+  },
+  "dependencies": {
+    "eslint-config-standard": "^17.1.0"
+  }
 }
